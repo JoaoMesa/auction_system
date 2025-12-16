@@ -1,6 +1,4 @@
-
-````markdown
-# Auction K8s Agents
+#Auction K8s Agents
 
 Projeto desenvolvido para a disciplina **Sistemas Distribuídos (2025/2)**  
 **Universidade Federal de São Carlos – Campus Sorocaba (UFSCar Sorocaba)**
@@ -62,7 +60,6 @@ Todos os serviços são executados em containers Docker e gerenciados via Kubern
 
 ## Estrutura do Projeto
 
-```text
 .
 ├── app/                    # Aplicação Flask (API e frontend)
 │   ├── routes.py
