@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Auction System</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏷️ Real-Time Auction System</h1>
+            <p class="subtitle">Bid and win in real-time with instant updates</p>
+        </header>
+
+        <!-- Abas de Navegação -->
+        <div class="tabs">
+            <button class="tab-button active" data-tab="debug">
+                <i class="fas fa-bug"></i> Debug
+            </button>
+            <button class="tab-button" data-tab="create">
+                <i class="fas fa-plus-circle"></i> Create Auction
+            </button>
+            <button class="tab-button" data-tab="bid">
+                <i class="fas fa-gavel"></i> Bid on Auction
+            </button>
+        </div>
+
+        <!-- Conteúdo das Abas -->
+        <div class="tab-content">
+            <!-- Aba Debug -->
+            <div id="debug" class="tab-pane active">
+                <div class="section">
+                    <h2><i class="fas fa-heartbeat"></i> System Status</h2>
+                    <div id="status">
+                        <div class="loading">
+                            <p>Checking system status...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2><i class="fas fa-broadcast-tower"></i> Real-Time Bids Stream</h2>
+                    <div id="bid-stream" class="stream-container">
+                        <div class="info">
+                            <p>Select an auction from the Bid tab to see real-time updates</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Aba Create Auction -->
+            <div id="create" class="tab-pane">
+                <div class="section">
+                    <h2><i class="fas fa-plus-circle"></i> Create New Auction</h2>
+                    <div id="create-auction-message"></div>
+                    <form id="create-auction-form">
+                        <div class="form-group">
+                            <label for="title"><i class="fas fa-heading"></i> Auction Title:</label>
+                            <input type="text" id="title" name="title" required 
+                                   placeholder="e.g., Vintage Watch Collection">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="description"><i class="fas fa-align-left"></i> Description:</label>
+                            <textarea id="description" name="description" rows="4" required 
+                                      placeholder="Describe your item in detail..."></textarea>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="starting_price"><i class="fas fa-dollar-sign"></i> Starting Price ($):</label>
+                                <input type="number" id="starting_price" name="starting_price" 
+                                       step="0.01" min="0.01" required value="50.00">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="duration_hours"><i class="fas fa-clock"></i> Auction Duration:</label>
+                                <select id="duration_hours" name="duration_hours">
+                                    <option value="1">1 Hour</option>
+                                    <option value="6">6 Hours</option>
+                                    <option value="24" selected>24 Hours</option>
+                                    <option value="48">2 Days</option>
+                                    <option value="168">1 Week</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="owner_id"><i class="fas fa-user"></i> Owner ID:</label>
+                            <input type="text" id="owner_id" name="owner_id" 
+                                   value="user_${Date.now()}" required>
+                        </div>
+                        
+                        <button type="submit" id="create-auction-btn" class="btn-submit">
+                            <i class="fas fa-rocket"></i> Create Auction
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Aba Bid on Auction -->
+            <div id="bid" class="tab-pane">
+                <div class="section">
+                    <h2><i class="fas fa-list"></i> Active Auctions</h2>
+                    <div id="auctions-container">
+                        <div class="loading">
+                            <p>Loading auctions...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal para Fazer Lance (escondido por padrão) -->
+        <div id="bid-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2><i class="fas fa-money-bill-wave"></i> Place Your Bid</h2>
+            <span class="close-modal">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div id="bid-modal-message"></div>
+            
+            <div class="auction-info">
+                <h3 id="modal-auction-title" class="modal-auction-title"></h3>
+                <p id="modal-auction-description" class="modal-auction-description"></p>
+                <div class="auction-stats">
+                    <div class="stat">
+                        <span class="stat-label">Current Price:</span>
+                        <span class="stat-value" id="modal-current-price"></span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Time Left:</span>
+                        <span class="stat-value" id="modal-time-left"></span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Current Winner:</span>
+                        <span class="stat-value" id="modal-current-winner">-</span>
+                    </div>
+                </div>
+            </div>
+            
+            <form id="bid-modal-form">
+                <input type="hidden" id="modal-auction-id">
+                
+                <div class="form-group">
+                    <label for="bidder-name-modal"><i class="fas fa-user"></i> Your Name:</label>
+                    <input type="text" id="bidder-name-modal" name="bidder_name" 
+                           placeholder="Enter your display name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="bid-amount-modal"><i class="fas fa-dollar-sign"></i> Bid Amount ($):</label>
+                    <div class="bid-amount-container">
+                        <input type="number" id="bid-amount-modal" name="bid_amount" 
+                               step="0.01" min="0.01" required placeholder="Enter bid amount">
+                        <button type="button" class="btn-small" onclick="setMinBid()">Min Bid</button>
+                    </div>
+                    <small class="hint">Minimum bid: 5% above current price</small>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancel" onclick="closeBidModal()">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                    <button type="submit" id="place-bid-modal-btn" class="btn-submit">
+                        <i class="fas fa-paper-plane"></i> Place Bid
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

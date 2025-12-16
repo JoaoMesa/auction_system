@@ -1,0 +1,46 @@
+version: "3.8"
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: auction-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+    networks:
+      - auction-network
+
+  flask-app:
+    build: .
+    container_name: flask-auction
+    ports:
+      - "5000:5000"
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - FLASK_APP=run.py
+      - FLASK_ENV=development
+    volumes:
+      - ./app:/app/app # Monta código para hot-reload
+      - ./config.py:/app/config.py
+      - ./run.py:/app/run.py
+    depends_on:
+      - redis
+    restart: unless-stopped
+    networks:
+      - auction-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  auction-network:
+    driver: bridge
+
+volumes:
+  redis_data:
+    driver: local
