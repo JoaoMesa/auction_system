@@ -7,7 +7,6 @@ import os
 import traceback
 from typing import Optional
 
-# Tentativas de import (suporta diferentes SDKs/versões)
 try:
     import google.generativeai as genai  # pip install google-generativeai
     HAS_GOOGLE_AI = True

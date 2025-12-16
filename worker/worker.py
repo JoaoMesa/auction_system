@@ -62,19 +62,15 @@ class AuctionWorker:
             print(f"   Valor Final: R$ {auction.get('current_price', 0):.2f}")
             print(f"{'='*50}\n")
             
-            # Verifica se houve vencedor
             winner_email = 'navesmesajoao@gmail.com'
             
-            # 1. Gerar relatório do leilão usando IA
             print("📝 Gerando relatório do leilão...")
             report = self.ai_agent.generate_auction_report(auction)
             print(f"   Relatório gerado: {len(report)} caracteres")
             
-            # 2. Gerar e-mail para o vencedor
             print("✉️ Gerando e-mail para o vencedor...")
             email_content = self.ai_agent.generate_winner_email(auction)
             
-            # 3. Enviar e-mail
             print(f"📧 Enviando e-mail para {winner_email}...")
             email_sent = self.notifications.send_email(
                 to_email=winner_email,
@@ -83,11 +79,9 @@ class AuctionWorker:
             )
             print(f"   E-mail: {'✅ Enviado' if email_sent else '❌ Falhou'}")
             
-            # 4. Gerar post para Discord
             print("💬 Gerando post para Discord...")
             discord_content = self.ai_agent.generate_discord_post(auction)
             
-            # 5. Enviar para Discord
             print("🎮 Postando no Discord...")
             discord_sent = self.notifications.send_discord_message(discord_content)
             print(f"   Discord: {'✅ Enviado' if discord_sent else '❌ Falhou'}")
@@ -109,7 +103,6 @@ class AuctionWorker:
         
         print("👂 Aguardando eventos de leilões finalizados...\n")
         
-        # Loop infinito para escutar mensagens
         for message in self.pubsub.listen():
             if message['type'] == 'message':
                 try:

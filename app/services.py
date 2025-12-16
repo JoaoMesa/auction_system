@@ -9,18 +9,14 @@ class AuctionService:
         """Cria um novo leilão"""
         print(f"Creating auction: {title}, price: {starting_price}, owner: {owner_id}, end_time: {end_time}")
         
-        # Validação do tempo de término
         try:
-            # Converter para datetime com timezone UTC
             if 'Z' in end_time:
                 end_datetime = datetime.fromisoformat(end_time.replace('Z', '+00:00')).replace(tzinfo=timezone.utc)
             else:
                 end_datetime = datetime.fromisoformat(end_time)
-                # Se não tem timezone, assumir UTC
                 if end_datetime.tzinfo is None:
                     end_datetime = end_datetime.replace(tzinfo=timezone.utc)
             
-            # Usar datetime UTC atual
             current_time = datetime.now(timezone.utc)
             print(f"Current time (UTC): {current_time}")
             print(f"End time: {end_datetime}")
@@ -33,7 +29,6 @@ class AuctionService:
             print(f"Invalid date format: {end_time}, error: {e}")
             return None, f"Invalid date format: {end_time}. Use ISO format (e.g., 2024-12-31T23:59:59Z)"
         
-        # Validação do preço
         try:
             starting_price = float(starting_price)
             if starting_price <= 0:
@@ -41,7 +36,6 @@ class AuctionService:
         except ValueError:
             return None, "Invalid starting price"
         
-        # Cria o leilão
         auction = Auction(
             title=title,
             description=description,
@@ -53,8 +47,6 @@ class AuctionService:
         print(f"Auction object created: {auction.id}")
         
         try:
-            # Salva no Redis - USANDO O MÉTODO CORRETO
-            # O redis_client.set_auction_data já deve converter boolean para string
             redis_client.set_auction_data(auction.id, auction.to_dict())
 
             redis_client.get_connection().hset(f"auction:{auction.id}", 'current_winner', '')
@@ -76,15 +68,12 @@ class AuctionService:
         if not data:
             return None
         
-        # CONVERTER TODOS OS CAMPOS IMPORTANTES
-        # Garantir que os campos de vencedor existam
         if 'current_winner' not in data:
             data['current_winner'] = ''
         
         if 'current_winner_id' not in data:
             data['current_winner_id'] = ''
         
-        # Converter tipos numéricos
         try:
             if 'current_price' in data:
                 data['current_price'] = float(data['current_price'])
@@ -123,18 +112,15 @@ class AuctionService:
                 try:
                     auction_data = redis_client.get_auction_data(auction_id)
                     if auction_data:
-                        # Verificar se está ativo
                         is_active = auction_data.get('active', 'false') == 'true'
                         
                         if is_active:
-                            # GARANTIR QUE OS CAMPOS DE VENCEDOR EXISTAM
                             if 'current_winner' not in auction_data:
                                 auction_data['current_winner'] = ''
                             
                             if 'current_winner_id' not in auction_data:
                                 auction_data['current_winner_id'] = ''
                             
-                            # Converter tipos
                             try:
                                 auction_data['current_price'] = float(auction_data.get('current_price', 0))
                             except:
@@ -166,9 +152,6 @@ class AuctionService:
             traceback.print_exc()
             return []
     
-    # ========================================================================
-    # 🔥 NOVA FUNÇÃO - Publica evento de leilão finalizado para o AI Worker
-    # ========================================================================
     @staticmethod
     def publish_auction_ended(auction_id):
         """
@@ -233,9 +216,6 @@ class AuctionService:
             traceback.print_exc()
             return False
     
-    # ========================================================================
-    # 🔥 MODIFICADO - Fecha leilões expirados E PUBLICA EVENTO
-    # ========================================================================
     @staticmethod
     def close_expired_auctions():
         """Fecha leilões expirados e notifica o AI Worker"""
@@ -252,7 +232,6 @@ class AuctionService:
                         end_time_str = auction_data.get('end_time', '')
                         if end_time_str:
                             try:
-                                # Converter string para datetime
                                 if 'Z' in end_time_str:
                                     end_time = datetime.fromisoformat(end_time_str.replace('Z', '+00:00')).replace(tzinfo=timezone.utc)
                                 else:
@@ -263,10 +242,8 @@ class AuctionService:
                                 if current_time >= end_time:
                                     print(f"⏰ Closing expired auction: {auction_id}")
                                     
-                                    # Fecha o leilão
                                     redis_client.close_auction(auction_id)
                                     
-                                    # 🔥 PUBLICA EVENTO PARA O AI WORKER
                                     AuctionService.publish_auction_ended(auction_id)
                                     
                             except Exception as e:

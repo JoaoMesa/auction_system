@@ -62,13 +62,11 @@ def create_auction():
     if 'end_time' not in data:
         duration_hours = int(data.get('duration_hours', 24))
         end_datetime = datetime.now(timezone.utc) + timedelta(hours=duration_hours)
-        # Formato correto ISO com 'Z' no final (sem +00:00 antes do Z)
         end_time = end_datetime.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
         data['end_time'] = end_time
         print(f"Generated end_time: {end_time}")
     
     try:
-        # Cria o leilão
         auction, error = AuctionService.create_auction(
             title=data['title'],
             description=data['description'],

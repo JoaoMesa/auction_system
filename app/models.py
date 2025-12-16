@@ -28,7 +28,7 @@ class Auction:
             'active': 'true' if self.active else 'false',  # String para Redis
             'bid_count': str(self.bid_count),  # String para Redis
             #'current_winner': str(self.current_winner) if self.current_winner else '',  # NOVO
-            #'current_winner_id': str(self.current_winner_id) if self.current_winner_id else ''  # NOVO
+            #'current_winner_id': str(self.current_winner_id) if self.current_winner_id else ''  
         }
     
     def is_active(self):
@@ -61,6 +61,6 @@ class Bid:
             'auction_id': self.auction_id,
             'user_id': self.user_id,
             'username': self.username,
-            'amount': str(self.amount),  # String para Redis
-            'timestamp': str(self.timestamp)  # String para Redis
+            'amount': str(self.amount),  
+            'timestamp': str(self.timestamp)  
         }
