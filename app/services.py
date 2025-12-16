@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+import json
 from app.models import Auction, Bid
 from app.redis_client import redis_client
 
@@ -165,9 +166,79 @@ class AuctionService:
             traceback.print_exc()
             return []
     
+    # ========================================================================
+    # 🔥 NOVA FUNÇÃO - Publica evento de leilão finalizado para o AI Worker
+    # ========================================================================
+    @staticmethod
+    def publish_auction_ended(auction_id):
+        """
+        Publica evento de leilão finalizado no Redis Pub/Sub.
+        O AI Worker irá escutar este canal e processar o evento.
+        """
+        try:
+            # Canal onde o worker está escutando
+            channel = "leiloes_finalizados"
+            
+            # Busca dados completos do leilão
+            auction_data = AuctionService.get_auction(auction_id)
+            
+            if not auction_data:
+                print(f"⚠️ Leilão {auction_id} não encontrado para publicar evento")
+                return False
+            
+            # Busca os lances do leilão
+            bids = BidService.get_auction_bids(auction_id, limit=100)
+            
+            # Prepara informações do vencedor
+            winner_name = auction_data.get('current_winner', 'Nenhum')
+            winner_id = auction_data.get('current_winner_id', '')
+            
+            # Se não tem vencedor, define como vazio
+            #winner_email = ''
+            #if winner_id and winner_name and winner_name != 'Nenhum':
+            #    winner_email = f"{winner_name.lower().replace(' ', '.')}@example.com"
+            
+            winner_email = 'navesmesajoao@gmail.com'
+
+            # Monta a mensagem com todos os dados do leilão
+            message = {
+                "type": "auction_ended",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "auction": {
+                    "auction_id": auction_id,
+                    "title": auction_data.get('title', 'N/A'),
+                    "description": auction_data.get('description', 'N/A'),
+                    "start_price": float(auction_data.get('starting_price', 0)),
+                    "current_price": float(auction_data.get('current_price', 0)),
+                    "winner_name": winner_name,
+                    "winner_email": winner_email,  # E-mail do vencedor
+                    "created_at": auction_data.get('created_at', ''),
+                    "end_time": auction_data.get('end_time', ''),
+                    "bids": bids  # Histórico de lances
+                }
+            }
+            
+            # Publica no canal do Redis
+            subscribers = redis_client.get_connection().publish(channel, json.dumps(message))
+            
+            print(f"✅ Evento publicado no canal '{channel}' para leilão {auction_id}")
+            print(f"   Subscribers ativos: {subscribers}")
+            print(f"   Vencedor: {winner_name} ({winner_email})")
+            
+            return True
+            
+        except Exception as e:
+            print(f"❌ Erro ao publicar evento de leilão finalizado: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+    
+    # ========================================================================
+    # 🔥 MODIFICADO - Fecha leilões expirados E PUBLICA EVENTO
+    # ========================================================================
     @staticmethod
     def close_expired_auctions():
-        """Fecha leilões expirados - VERSÃO SIMPLIFICADA"""
+        """Fecha leilões expirados e notifica o AI Worker"""
         print("=== Checking expired auctions ===")
         try:
             active_auction_ids = redis_client.get_active_auctions()
@@ -190,13 +261,14 @@ class AuctionService:
                                         end_time = end_time.replace(tzinfo=timezone.utc)
                                 
                                 if current_time >= end_time:
-                                    print(f"Closing expired auction: {auction_id}")
+                                    print(f"⏰ Closing expired auction: {auction_id}")
+                                    
+                                    # Fecha o leilão
                                     redis_client.close_auction(auction_id)
-
-                                    redis_client.publish_message("leiloes_finalizados",
-                                    {"auction_id": auction_id}
-                                    )
-
+                                    
+                                    # 🔥 PUBLICA EVENTO PARA O AI WORKER
+                                    AuctionService.publish_auction_ended(auction_id)
+                                    
                             except Exception as e:
                                 print(f"Error checking time for auction {auction_id}: {e}")
                 except Exception as e:
@@ -234,6 +306,10 @@ class BidService:
             
             if current_time >= end_time:
                 redis_client.close_auction(auction_id)
+                
+                # 🔥 PUBLICA EVENTO quando leilão expira durante tentativa de lance
+                AuctionService.publish_auction_ended(auction_id)
+                
                 return None, "Auction has ended"
         except Exception as e:
             print(f"Error checking auction time: {e}")

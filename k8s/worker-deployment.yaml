@@ -1,0 +1,111 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-worker
+  namespace: auction
+  labels:
+    app: ai-worker
+    component: automation
+spec:
+  replicas: 1 # Um worker é suficiente para processar eventos
+  selector:
+    matchLabels:
+      app: ai-worker
+  template:
+    metadata:
+      labels:
+        app: ai-worker
+        component: automation
+    spec:
+      containers:
+        - name: ai-worker
+          image: auction-ai-worker:latest
+          imagePullPolicy: IfNotPresent
+
+          # 🔑 VARIÁVEIS DE AMBIENTE VINDAS DO SECRET
+          env:
+            - name: REDIS_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: worker-secrets
+                  key: REDIS_HOST
+
+            - name: REDIS_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: worker-secrets
+                  key: REDIS_PORT
+
+            - name: LLM_PROVIDER
+              valueFrom:
+                secretKeyRef:
+                  name: worker-secrets
+                  key: LLM_PROVIDER
+
+            - name: LLM_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: worker-secrets
+                  key: LLM_API_KEY
+
+            - name: SMTP_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: worker-secrets
+                  key: SMTP_HOST
+
+            - name: SMTP_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: worker-secrets
+                  key: SMTP_PORT
+
+            - name: SMTP_USER
+              valueFrom:
+                secretKeyRef:
+                  name: worker-secrets
+                  key: SMTP_USER
+
+            - name: SMTP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: worker-secrets
+                  key: SMTP_PASSWORD
+
+            - name: EMAIL_FROM
+              valueFrom:
+                secretKeyRef:
+                  name: worker-secrets
+                  key: EMAIL_FROM
+
+            - name: DISCORD_WEBHOOK_URL
+              valueFrom:
+                secretKeyRef:
+                  name: worker-secrets
+                  key: DISCORD_WEBHOOK_URL
+
+            - name: PYTHONUNBUFFERED
+              value: "1"
+
+          # Recursos do container
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "200m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+
+          # Health check básico
+          livenessProbe:
+            exec:
+              command:
+                - python
+                - -c
+                - "import redis; r = redis.Redis(host='redis'); r.ping()"
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+      restartPolicy: Always
